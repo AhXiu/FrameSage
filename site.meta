@@ -1,0 +1,8 @@
+{
+    "app_name": "framesage-scaffold",
+    "app_description": "AI 人像拍摄辅助工具移动端 H5，支持设备管理、实景光影识别、参数推荐、姿势构图与收藏",
+    "capabilities": [
+        "access_control"
+    ],
+    "datasources": {}
+}
