@@ -1,5 +1,22 @@
 import type { CameraParams, Device, SceneResult, UserMode } from '@/types';
 
+/**
+ * 倒数法则的工程化实现：分母至少等于焦段，并为手持人像动作保留稳定余量。
+ * stabilityFactor 是 FrameSage 的产品策略，不是强制摄影公理。
+ */
+export function safeShutterDenominator(
+  focalLength: number,
+  stabilityFactor = 2,
+): number {
+  const focal =
+    Number.isFinite(focalLength) && focalLength > 0 ? focalLength : 50;
+  const factor =
+    Number.isFinite(stabilityFactor) && stabilityFactor >= 1
+      ? stabilityFactor
+      : 1;
+  return Math.max(80, Math.ceil(focal * factor));
+}
+
 export function recommend(
   device: Device,
   scene: SceneResult,
@@ -18,7 +35,7 @@ export function recommend(
   const dappled = scene.id === 'shade-dappled';
   const side = scene.id === 'outdoor-side';
   const aperture = Math.max(maxAperture, night ? 1.8 : backlit ? 2 : 2.4);
-  const safeDenominator = Math.max(80, Math.ceil(focal * (night ? 1.3 : 2)));
+  const safeDenominator = safeShutterDenominator(focal, night ? 1.3 : 2);
   const isoLimit = Math.max(
     100,
     Number.isFinite(device.isoLimit) ? device.isoLimit : 3200,

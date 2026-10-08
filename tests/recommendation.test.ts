@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DEFAULT_DEVICE } from '../src/data/devices';
-import { recommend } from '../src/lib/recommendationEngine';
+import {
+  recommend,
+  safeShutterDenominator,
+} from '../src/lib/recommendationEngine';
 import { classifyScene } from '../src/lib/sceneEngine';
 
 test('夜景 ISO 不超过设备阈值且快门有效', () => {
@@ -52,4 +55,14 @@ test('缺失镜头字段仍返回有效参数', () => {
   );
   assert.match(result.aperture, /^f\/\d/);
   assert.ok(Number.isFinite(result.iso));
+});
+
+test('安全快门遵守倒数法则并应用稳定余量', () => {
+  assert.equal(safeShutterDenominator(85, 2), 170);
+  assert.ok(safeShutterDenominator(200, 1.3) >= 200);
+});
+
+test('非法焦段和权重会回退为有效安全快门', () => {
+  assert.equal(safeShutterDenominator(Number.NaN, 0), 80);
+  assert.ok(safeShutterDenominator(-1, Number.NaN) >= 50);
 });
