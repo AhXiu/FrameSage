@@ -1,8 +1,6 @@
-import { RULE_ENGINE_BASIS, RULE_ENGINE_BOUNDARY } from '@/data/ruleBasis';
 import type { CameraParams, PosePlan, SceneResult, UserMode } from '@/types';
 import {
   Aperture,
-  BookOpen,
   Bookmark,
   Check,
   ChevronLeft,
@@ -79,51 +77,40 @@ export function PlanView({
           </div>
         </div>
         {mode === 'expert' && (
-          <>
-            <div className="expert-grid">
-              <p>
-                <b>原理</b>
-                {params.principle}
-              </p>
-              <p>
-                <b>取舍</b>
-                {params.tradeoff}
-              </p>
-              <p>
-                <b>风险</b>
-                {params.risk}
-              </p>
-            </div>
-            <details className="theory-panel">
-              <summary>
-                <BookOpen />
-                <span>
-                  <b>规则引擎理论依据</b>
-                  <small>查看标准、实操方法与产品策略边界</small>
-                </span>
-              </summary>
-              <div className="theory-list">
-                {RULE_ENGINE_BASIS.map(item => (
-                  <article key={item.title}>
-                    <span>{item.standard}</span>
-                    <b>{item.title}</b>
-                    <p>{item.description}</p>
-                  </article>
-                ))}
-              </div>
-              <p className="theory-boundary">{RULE_ENGINE_BOUNDARY}</p>
-            </details>
-          </>
+          <div className="expert-grid">
+            <p>
+              <b>原理</b>
+              {params.principle}
+            </p>
+            <p>
+              <b>取舍</b>
+              {params.tradeoff}
+            </p>
+            <p>
+              <b>风险</b>
+              {params.risk}
+            </p>
+          </div>
         )}
       </section>
       <section className="pose-card">
         <div className="pose-visual">
-          <CompositionOverlay type={plan.composition} />
-          <span>{plan.focal}mm</span>
-          <div className="pose-silhouette">
+          <div className="pose-silhouette" aria-hidden="true">
             <i />
             <b />
           </div>
+          {plan.imageUrl && (
+            <img
+              className="pose-photo"
+              src={plan.imageUrl}
+              alt={plan.imageAlt ?? plan.name}
+              onError={event => {
+                event.currentTarget.style.display = 'none';
+              }}
+            />
+          )}
+          <CompositionOverlay type={plan.composition} />
+          <span>{plan.focal}mm</span>
           <small>{plan.composition}</small>
         </div>
         <div className="pose-content">

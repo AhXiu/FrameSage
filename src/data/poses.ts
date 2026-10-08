@@ -1,4 +1,23 @@
+import cityNightImage from '@/assets/poses/city-night.jpg';
+import indoorMixedImage from '@/assets/poses/indoor-mixed.jpg';
+import indoorSoftImage from '@/assets/poses/indoor-soft.jpg';
+import outdoorFrontImage from '@/assets/poses/outdoor-front.jpg';
+import outdoorSideImage from '@/assets/poses/outdoor-side.jpg';
+import shadeDappledImage from '@/assets/poses/shade-dappled.jpg';
+import windowBacklightImage from '@/assets/poses/window-backlight.jpg';
+import windowWarmNightImage from '@/assets/poses/window-warm-night.jpg';
 import type { Composition, PosePlan, SceneId } from '@/types';
+
+const sceneImages: Record<SceneId, string> = {
+  'indoor-soft': indoorSoftImage,
+  'indoor-mixed': indoorMixedImage,
+  'window-backlight': windowBacklightImage,
+  'shade-dappled': shadeDappledImage,
+  'outdoor-front': outdoorFrontImage,
+  'outdoor-side': outdoorSideImage,
+  'city-night': cityNightImage,
+  'window-warm-night': windowWarmNightImage,
+};
 
 const sceneGuides: Record<
   SceneId,
@@ -114,6 +133,8 @@ export const POSE_PLANS: PosePlan[] = (
         (sceneIndex % 2
           ? '，并检查背景线条不要切过头顶。'
           : '，拍前检查手指和衣角是否完整。'),
+      imageUrl: sceneImages[scene],
+      imageAlt: `${v.suffix}人像姿势参考图`,
     };
   }),
 );

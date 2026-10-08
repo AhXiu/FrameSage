@@ -68,6 +68,8 @@ export interface PosePlan {
   direction: string;
   framing: string;
   avoid: string;
+  imageUrl?: string;
+  imageAlt?: string;
   score?: number;
 }
 export interface Favorite {

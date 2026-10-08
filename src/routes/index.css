@@ -642,83 +642,6 @@ textarea:focus-visible {
   color: var(--sage-dark);
   margin-bottom: 4px;
 }
-.theory-panel {
-  margin-top: 10px;
-  border: 1px solid #dfe7dc;
-  border-radius: 16px;
-  background: #fbfcf8;
-  overflow: hidden;
-}
-.theory-panel summary {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
-  cursor: pointer;
-  list-style: none;
-  color: var(--sage-dark);
-}
-.theory-panel summary::-webkit-details-marker {
-  display: none;
-}
-.theory-panel summary svg {
-  width: 19px;
-  flex: 0 0 auto;
-  color: var(--sage);
-}
-.theory-panel summary span {
-  display: grid;
-  gap: 2px;
-}
-.theory-panel summary b {
-  font-size: 13px;
-}
-.theory-panel summary small {
-  color: #7a8378;
-  font-size: 11px;
-}
-.theory-list {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-  padding: 0 12px 12px;
-}
-.theory-list article {
-  padding: 11px;
-  border-radius: 12px;
-  background: var(--paper);
-  border: 1px solid var(--line);
-}
-.theory-list article > span {
-  display: inline-block;
-  margin-bottom: 6px;
-  color: var(--sage-dark);
-  background: var(--sage-pale);
-  border-radius: 999px;
-  padding: 3px 7px;
-  font-size: 10px;
-  font-weight: 700;
-}
-.theory-list article > b {
-  display: block;
-  color: #30382f;
-  font-size: 12px;
-  margin-bottom: 4px;
-}
-.theory-list article p,
-.theory-boundary {
-  margin: 0;
-  color: #697167;
-  font-size: 11px;
-  line-height: 1.55;
-}
-.theory-boundary {
-  margin: 0 12px 12px;
-  padding: 10px 12px;
-  border-radius: 11px;
-  background: #fff6e9;
-  color: #795b31;
-}
 .pose-card {
   display: grid;
   grid-template-columns: 42% 1fr;
@@ -730,6 +653,20 @@ textarea:focus-visible {
   border-radius: 19px;
   overflow: hidden;
   background: linear-gradient(150deg, #9da990, #d8c7aa);
+}
+.pose-photo {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+.pose-silhouette {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
 }
 .pose-visual > span,
 .pose-visual > small {
@@ -1250,8 +1187,7 @@ textarea:focus-visible {
   .favorite-list {
     grid-template-columns: 1fr;
   }
-  .expert-grid,
-  .theory-list {
+  .expert-grid {
     grid-template-columns: 1fr;
   }
   .page-heading h1 {
