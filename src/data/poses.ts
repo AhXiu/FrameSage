@@ -1,22 +1,46 @@
-import cityNightImage from '@/assets/poses/city-night.jpg';
-import indoorMixedImage from '@/assets/poses/indoor-mixed.jpg';
-import indoorSoftImage from '@/assets/poses/indoor-soft.jpg';
-import outdoorFrontImage from '@/assets/poses/outdoor-front.jpg';
-import outdoorSideImage from '@/assets/poses/outdoor-side.jpg';
-import shadeDappledImage from '@/assets/poses/shade-dappled.jpg';
-import windowBacklightImage from '@/assets/poses/window-backlight.jpg';
-import windowWarmNightImage from '@/assets/poses/window-warm-night.jpg';
+import cityNightImage1 from '@/assets/poses/city-night-1.jpg';
+import cityNightImage2 from '@/assets/poses/city-night-2.jpg';
+import cityNightImage3 from '@/assets/poses/city-night-3.jpg';
+import indoorMixedImage1 from '@/assets/poses/indoor-mixed-1.jpg';
+import indoorMixedImage2 from '@/assets/poses/indoor-mixed-2.jpg';
+import indoorMixedImage3 from '@/assets/poses/indoor-mixed-3.jpg';
+import indoorSoftImage1 from '@/assets/poses/indoor-soft-1.jpg';
+import indoorSoftImage2 from '@/assets/poses/indoor-soft-2.jpg';
+import indoorSoftImage3 from '@/assets/poses/indoor-soft-3.jpg';
+import outdoorFrontImage1 from '@/assets/poses/outdoor-front-1.jpg';
+import outdoorFrontImage2 from '@/assets/poses/outdoor-front-2.jpg';
+import outdoorFrontImage3 from '@/assets/poses/outdoor-front-3.jpg';
+import outdoorSideImage1 from '@/assets/poses/outdoor-side-1.jpg';
+import outdoorSideImage2 from '@/assets/poses/outdoor-side-2.jpg';
+import outdoorSideImage3 from '@/assets/poses/outdoor-side-3.jpg';
+import shadeDappledImage1 from '@/assets/poses/shade-dappled-1.jpg';
+import shadeDappledImage2 from '@/assets/poses/shade-dappled-2.jpg';
+import shadeDappledImage3 from '@/assets/poses/shade-dappled-3.jpg';
+import windowBacklightImage1 from '@/assets/poses/window-backlight-1.jpg';
+import windowBacklightImage2 from '@/assets/poses/window-backlight-2.jpg';
+import windowBacklightImage3 from '@/assets/poses/window-backlight-3.jpg';
+import windowWarmNightImage1 from '@/assets/poses/window-warm-night-1.jpg';
+import windowWarmNightImage2 from '@/assets/poses/window-warm-night-2.jpg';
+import windowWarmNightImage3 from '@/assets/poses/window-warm-night-3.jpg';
 import type { Composition, PosePlan, SceneId } from '@/types';
 
-const sceneImages: Record<SceneId, string> = {
-  'indoor-soft': indoorSoftImage,
-  'indoor-mixed': indoorMixedImage,
-  'window-backlight': windowBacklightImage,
-  'shade-dappled': shadeDappledImage,
-  'outdoor-front': outdoorFrontImage,
-  'outdoor-side': outdoorSideImage,
-  'city-night': cityNightImage,
-  'window-warm-night': windowWarmNightImage,
+const sceneImages: Record<SceneId, readonly [string, string, string]> = {
+  'indoor-soft': [indoorSoftImage1, indoorSoftImage2, indoorSoftImage3],
+  'indoor-mixed': [indoorMixedImage1, indoorMixedImage2, indoorMixedImage3],
+  'window-backlight': [
+    windowBacklightImage1,
+    windowBacklightImage2,
+    windowBacklightImage3,
+  ],
+  'shade-dappled': [shadeDappledImage1, shadeDappledImage2, shadeDappledImage3],
+  'outdoor-front': [outdoorFrontImage1, outdoorFrontImage2, outdoorFrontImage3],
+  'outdoor-side': [outdoorSideImage1, outdoorSideImage2, outdoorSideImage3],
+  'city-night': [cityNightImage1, cityNightImage2, cityNightImage3],
+  'window-warm-night': [
+    windowWarmNightImage1,
+    windowWarmNightImage2,
+    windowWarmNightImage3,
+  ],
 };
 
 const sceneGuides: Record<
@@ -133,7 +157,7 @@ export const POSE_PLANS: PosePlan[] = (
         (sceneIndex % 2
           ? '，并检查背景线条不要切过头顶。'
           : '，拍前检查手指和衣角是否完整。'),
-      imageUrl: sceneImages[scene],
+      imageUrl: sceneImages[scene][i],
       imageAlt: `${v.suffix}人像姿势参考图`,
     };
   }),
