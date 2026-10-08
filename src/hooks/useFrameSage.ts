@@ -34,10 +34,15 @@ export function useFrameSage() {
   );
   const plans = useMemo(() => {
     const aperture = Number.parseFloat(params.aperture.slice(2));
+    const bokehFactor =
+      Number.isFinite(device.bokehFactor) && device.bokehFactor > 0
+        ? device.bokehFactor
+        : 1;
+    const effectiveAperture = aperture / bokehFactor;
     return rankPlans(
       scene.id,
       device.focalLength || 50,
-      Number.isFinite(aperture) && aperture <= 2.4,
+      Number.isFinite(effectiveAperture) && effectiveAperture <= 2.4,
     );
   }, [device, params.aperture, scene.id]);
 
