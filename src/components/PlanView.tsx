@@ -21,6 +21,7 @@ export function PlanView({
   active,
   setActive,
   mode,
+  isFavorited,
   onFavorite,
 }: {
   scene: SceneResult;
@@ -29,6 +30,7 @@ export function PlanView({
   active: number;
   setActive: (n: number) => void;
   mode: UserMode;
+  isFavorited: boolean;
   onFavorite: () => void;
 }) {
   const plan = plans[active] ?? plans[0];
@@ -44,8 +46,14 @@ export function PlanView({
               : '参数、权衡、姿态与风险已按当前设备联动。'}
           </p>
         </div>
-        <button className="save-button" onClick={onFavorite}>
-          <Bookmark size={18} /> 收藏
+        <button
+          className={`save-button${isFavorited ? ' active' : ''}`}
+          onClick={onFavorite}
+          aria-pressed={isFavorited}
+          aria-label={isFavorited ? '取消收藏当前方案' : '收藏当前方案'}
+        >
+          <Bookmark size={18} fill={isFavorited ? 'currentColor' : 'none'} />
+          {isFavorited ? '已收藏' : '收藏'}
         </button>
       </header>
       <section className="parameter-card">

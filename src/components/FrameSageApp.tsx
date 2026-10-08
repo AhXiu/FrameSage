@@ -17,7 +17,17 @@ export function FrameSageApp() {
     setToast(text);
     window.setTimeout(() => setToast(''), 1800);
   };
+  const activePlanItem = app.plans[activePlan] ?? app.plans[0];
+  const favoriteItem = app.favorites.find(
+    item =>
+      item.plan.id === activePlanItem?.id && item.scene.id === app.scene.id,
+  );
   const favorite = () => {
+    if (favoriteItem) {
+      app.removeFavorite(favoriteItem.id);
+      notify('已取消收藏');
+      return;
+    }
     app.addFavorite(activePlan);
     notify('方案已完整收藏');
   };
@@ -86,6 +96,7 @@ export function FrameSageApp() {
               active={activePlan}
               setActive={setActivePlan}
               mode={app.mode}
+              isFavorited={Boolean(favoriteItem)}
               onFavorite={favorite}
             />
           )}

@@ -571,6 +571,17 @@ textarea:focus-visible {
   padding: 0 14px;
   background: #fff1e6;
   color: #995a2c;
+  transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+.save-button.active {
+  background: #dce8d8;
+  color: #36543b;
+}
+.save-button.active svg {
+  fill: currentColor;
+}
+.save-button:active {
+  transform: scale(0.97);
 }
 .parameter-grid {
   display: grid;
