@@ -8,6 +8,16 @@ export type SceneId =
   | 'city-night'
   | 'window-warm-night';
 export type UserMode = 'beginner' | 'expert';
+export type ImageGenerationProvider = 'ark' | 'openai' | 'custom';
+export type ImageGenerationTransport = 'direct' | 'proxy';
+export interface ImageGenerationConfig {
+  provider: ImageGenerationProvider;
+  displayName: string;
+  baseUrl: string;
+  model: string;
+  transport: ImageGenerationTransport;
+  proxyUrl: string;
+}
 export type SubjectMotion = 'still' | 'walking' | 'fast';
 export type HoldingState = 'steady' | 'normal' | 'shaky' | 'tripod';
 export type GroupSize = 'single' | 'couple' | 'group';

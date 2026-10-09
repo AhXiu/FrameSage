@@ -1,6 +1,16 @@
 import { POSE_PLANS } from '@/data/poses';
+import {
+  buildPosePreviewPrompt,
+  generatePosePreview,
+  supportsReferenceImages,
+  validateImageGenerationConfig,
+} from '@/lib/imageGeneration';
 import { compressImage, validateImageFile } from '@/lib/imageProcessing';
 import { personalizePosePlans } from '@/lib/personalizedPoses';
+import {
+  loadImageGenerationAppKey,
+  loadImageGenerationConfig,
+} from '@/lib/storage';
 import { requestVisionAnalysis } from '@/lib/visionClient';
 import type {
   ClothingType,
@@ -12,7 +22,15 @@ import type {
   PosePlan,
   SceneId,
 } from '@/types';
-import { Camera, ImagePlus, RotateCcw, Sparkles, Trash2 } from 'lucide-react';
+import {
+  Camera,
+  Download,
+  ImagePlus,
+  RotateCcw,
+  Sparkles,
+  Trash2,
+  XCircle,
+} from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 const STYLES: OutfitStyle[] = ['清新', '通勤', '复古', '街头', '优雅', '休闲'];
@@ -33,11 +51,13 @@ interface TemporaryImage {
 
 export function PersonalizedPoseWorkspace({
   scene,
+  selectedPlan,
   applied,
   onApply,
   onRestore,
 }: {
   scene: SceneId;
+  selectedPlan: PosePlan;
   applied: boolean;
   onApply: (plans: PosePlan[]) => void;
   onRestore: () => void;
@@ -53,10 +73,20 @@ export function PersonalizedPoseWorkspace({
   );
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [generationConfig] = useState(loadImageGenerationConfig);
+  const [appKey] = useState(loadImageGenerationAppKey);
+  const [generationConsent, setGenerationConsent] = useState(false);
+  const [generationBusy, setGenerationBusy] = useState(false);
+  const [generationMessage, setGenerationMessage] = useState('');
+  const [generatedImages, setGeneratedImages] = useState<
+    Record<string, string>
+  >({});
+  const generationController = useRef<AbortController | null>(null);
   const imagesRef = useRef<(TemporaryImage | null)[]>([null, null]);
   imagesRef.current = [environmentImage, modelImage];
   useEffect(
     () => () => {
+      generationController.current?.abort();
       for (const image of imagesRef.current) {
         if (image) URL.revokeObjectURL(image.previewUrl);
       }
@@ -77,6 +107,63 @@ export function PersonalizedPoseWorkspace({
       : environmentImage || modelImage
         ? 'manual'
         : 'empty';
+  const sendsReferences = supportsReferenceImages(generationConfig.provider);
+  const generationConfigErrors = validateImageGenerationConfig(
+    generationConfig,
+    appKey,
+  );
+  const generatedImage = generatedImages[selectedPlan.id];
+
+  const generatePreview = async () => {
+    if (generationConfigErrors.length) {
+      setGenerationMessage(
+        `${generationConfigErrors[0]} 请前往设置页完成配置。`,
+      );
+      return;
+    }
+    if (sendsReferences && (!environmentImage || !modelImage)) {
+      setGenerationMessage(
+        'Seedream 多参考图预览需要先提供环境图和模特全身图。',
+      );
+      return;
+    }
+    if (sendsReferences && !generationConsent) {
+      setGenerationMessage('请先勾选确认本次发送两张压缩参考图。');
+      return;
+    }
+    const controller = new AbortController();
+    generationController.current = controller;
+    setGenerationBusy(true);
+    setGenerationMessage('正在生成写实姿势预览…');
+    const result = await generatePosePreview(
+      generationConfig,
+      appKey,
+      buildPosePreviewPrompt(
+        selectedPlan,
+        profiles.outfit,
+        profiles.environment,
+      ),
+      environmentImage && modelImage
+        ? [environmentImage.blob, modelImage.blob]
+        : [],
+      { signal: controller.signal },
+    );
+    if (result.ok) {
+      setGeneratedImages(current => ({
+        ...current,
+        [selectedPlan.id]: result.imageUrl,
+      }));
+      setGenerationMessage(
+        result.usedReferenceImages
+          ? '生成完成。两张图片仅作为本次 AI 示意的参考。'
+          : '生成完成。该提供商仅使用文本提示，未上传参考图。',
+      );
+    } else {
+      setGenerationMessage(result.message);
+    }
+    setGenerationBusy(false);
+    generationController.current = null;
+  };
 
   const replaceImage = async (
     file: File,
@@ -237,6 +324,101 @@ export function PersonalizedPoseWorkspace({
         selected={features}
         onChange={setFeatures}
       />
+      <div className="generation-preview" aria-label="写实姿势预览生成">
+        <div className="generation-preview-head">
+          <div>
+            <b>当前推荐：{selectedPlan.name}</b>
+            <small>{generationConfig.displayName}</small>
+          </div>
+          <span>AI 示意</span>
+        </div>
+        <p className="service-note">
+          {sendsReferences
+            ? '生成时会把当前两张压缩图片发送给你选择的提供商，仅作为参考；结果不保证人物完全一致。'
+            : '当前提供商仅支持文本提示生成，不上传参考图，也不会声称保留模特一致性。'}
+        </p>
+        {sendsReferences && (
+          <label className="generation-consent">
+            <input
+              type="checkbox"
+              checked={generationConsent}
+              onChange={event =>
+                setGenerationConsent(event.currentTarget.checked)
+              }
+            />
+            我已确认本次将环境图与模特图发送给 {generationConfig.displayName}
+          </label>
+        )}
+        {generatedImage && (
+          <div className="generated-result">
+            <img
+              src={generatedImage}
+              alt={`${selectedPlan.name}的 AI 写实姿势示意`}
+            />
+            <div>
+              <a
+                href={generatedImage}
+                download={`framesage-${selectedPlan.id}.png`}
+              >
+                <Download size={16} /> 下载 / 打开图片
+              </a>
+              <button
+                type="button"
+                onClick={() =>
+                  setGeneratedImages(current => {
+                    const next = { ...current };
+                    delete next[selectedPlan.id];
+                    return next;
+                  })
+                }
+              >
+                <Trash2 size={16} /> 删除
+              </button>
+            </div>
+          </div>
+        )}
+        <div className="generation-actions">
+          <button
+            type="button"
+            className="primary"
+            disabled={
+              generationBusy ||
+              generationConfigErrors.length > 0 ||
+              (sendsReferences &&
+                (!environmentImage || !modelImage || !generationConsent))
+            }
+            onClick={generatePreview}
+            aria-label={
+              generatedImage ? '重新生成写实姿势预览' : '生成写实姿势预览'
+            }
+          >
+            <Sparkles size={17} />
+            {generationBusy
+              ? '生成中…'
+              : generatedImage
+                ? '重新生成'
+                : '生成写实姿势预览'}
+          </button>
+          {generationBusy && (
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => generationController.current?.abort()}
+              aria-label="取消图片生成"
+            >
+              <XCircle size={17} /> 取消
+            </button>
+          )}
+        </div>
+        {generationConfigErrors.length > 0 && (
+          <p className="generation-error">
+            {generationConfigErrors[0]} 请在“设置 → 图片生成服务”中配置。
+          </p>
+        )}
+        {generationMessage && (
+          <output className="workspace-message">{generationMessage}</output>
+        )}
+      </div>
       <div className="workspace-actions">
         <button type="button" className="primary" onClick={apply}>
           <Sparkles size={17} />

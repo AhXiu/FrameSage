@@ -226,6 +226,7 @@ export function PlanView({
       </section>
       <PersonalizedPoseWorkspace
         scene={scene.id}
+        selectedPlan={plan}
         applied={personalized}
         onApply={onApplyPersonalized}
         onRestore={onRestorePlans}

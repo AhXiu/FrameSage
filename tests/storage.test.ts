@@ -2,9 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   KEYS,
+  SESSION_KEYS,
   clearAppData,
   loadDevices,
+  loadImageGenerationAppKey,
   saveDevices,
+  saveImageGenerationAppKey,
+  saveImageGenerationConfig,
 } from '../src/lib/storage';
 
 class MemoryStorage {
@@ -20,6 +24,10 @@ class MemoryStorage {
   }
 }
 Object.defineProperty(globalThis, 'localStorage', {
+  value: new MemoryStorage(),
+  configurable: true,
+});
+Object.defineProperty(globalThis, 'sessionStorage', {
   value: new MemoryStorage(),
   configurable: true,
 });
@@ -52,4 +60,35 @@ test('清空只移除应用键', () => {
   clearAppData();
   assert.equal(localStorage.getItem(KEYS.mode), null);
   assert.equal(localStorage.getItem('other'), 'keep');
+});
+
+test('生成 AppKey 只进入 sessionStorage，非敏感配置才进入 localStorage', () => {
+  const appKey = 'unit-test-key';
+  saveImageGenerationConfig({
+    provider: 'custom',
+    displayName: 'Custom',
+    baseUrl: 'https://images.example/generate',
+    model: 'custom-model',
+    transport: 'direct',
+    proxyUrl: '',
+  });
+  saveImageGenerationAppKey(appKey);
+  assert.equal(loadImageGenerationAppKey(), appKey);
+  assert.equal(
+    sessionStorage.getItem(SESSION_KEYS.imageGenerationAppKey),
+    appKey,
+  );
+  assert.doesNotMatch(
+    localStorage.getItem(KEYS.imageGeneration) ?? '',
+    /unit-test-key/,
+  );
+});
+
+test('清空应用数据同时清除会话 Key', () => {
+  saveImageGenerationAppKey('temporary-key');
+  clearAppData();
+  assert.equal(
+    sessionStorage.getItem(SESSION_KEYS.imageGenerationAppKey),
+    null,
+  );
 });

@@ -1,6 +1,7 @@
 import type { Device, UserMode } from '@/types';
 import { RotateCcw, ShieldCheck, Sparkles, Wrench } from 'lucide-react';
 import { DeviceManager } from './DeviceManager';
+import { ImageGenerationSettings } from './ImageGenerationSettings';
 
 export function SettingsView({
   mode,
@@ -69,6 +70,7 @@ export function SettingsView({
           onSelect={onSelect}
         />
       </section>
+      <ImageGenerationSettings />
       <section className="setting-card">
         <div className="setting-icon">
           <ShieldCheck />
@@ -76,9 +78,9 @@ export function SettingsView({
         <div className="setting-main">
           <h2>隐私说明</h2>
           <p>
-            摄像头画面只在浏览器内取一帧，并通过 Canvas
-            计算统计指标。照片不会上传、不会保存；设备与收藏仅存在本机
-            localStorage。
+            摄像头场景分析默认只在浏览器内取一帧并通过 Canvas
+            计算统计指标。个性化工作区仅在你确认生成时，按所选服务能力发送压缩参考图；设备与收藏仅存在本机
+            localStorage，生成图不会写入收藏或本地存储。
           </p>
         </div>
       </section>

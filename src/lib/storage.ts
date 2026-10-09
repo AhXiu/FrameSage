@@ -1,10 +1,24 @@
-import type { Device, Favorite, UserMode } from '@/types';
+import {
+  DEFAULT_IMAGE_GENERATION_CONFIG,
+  normalizeImageGenerationConfig,
+} from '@/lib/imageGeneration';
+import type {
+  Device,
+  Favorite,
+  ImageGenerationConfig,
+  UserMode,
+} from '@/types';
 
 export const KEYS = {
   devices: 'framesage.devices.v1',
   current: 'framesage.current.v1',
   favorites: 'framesage.favorites.v1',
   mode: 'framesage.mode.v1',
+  imageGeneration: 'framesage.image-generation.v1',
+} as const;
+
+export const SESSION_KEYS = {
+  imageGenerationAppKey: 'framesage.image-generation.app-key.v1',
 } as const;
 
 function safeParse<T>(value: string | null, fallback: T): T {
@@ -49,6 +63,32 @@ export function loadMode(): UserMode {
 export function saveMode(mode: UserMode): void {
   localStorage.setItem(KEYS.mode, mode);
 }
+export function loadImageGenerationConfig(): ImageGenerationConfig {
+  if (typeof localStorage === 'undefined')
+    return DEFAULT_IMAGE_GENERATION_CONFIG;
+  return normalizeImageGenerationConfig(
+    safeParse<Partial<ImageGenerationConfig> | null>(
+      localStorage.getItem(KEYS.imageGeneration),
+      null,
+    ),
+  );
+}
+export function saveImageGenerationConfig(config: ImageGenerationConfig): void {
+  const safeConfig = normalizeImageGenerationConfig(config);
+  localStorage.setItem(KEYS.imageGeneration, JSON.stringify(safeConfig));
+}
+export function loadImageGenerationAppKey(): string {
+  return typeof sessionStorage === 'undefined'
+    ? ''
+    : (sessionStorage.getItem(SESSION_KEYS.imageGenerationAppKey) ?? '');
+}
+export function saveImageGenerationAppKey(appKey: string): void {
+  if (appKey)
+    sessionStorage.setItem(SESSION_KEYS.imageGenerationAppKey, appKey);
+  else sessionStorage.removeItem(SESSION_KEYS.imageGenerationAppKey);
+}
 export function clearAppData(): void {
   Object.values(KEYS).forEach(key => localStorage.removeItem(key));
+  if (typeof sessionStorage !== 'undefined')
+    Object.values(SESSION_KEYS).forEach(key => sessionStorage.removeItem(key));
 }
