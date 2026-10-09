@@ -1,4 +1,16 @@
-import type { CameraParams, PosePlan, SceneResult, UserMode } from '@/types';
+import {
+  type TrialProblem,
+  buildShootingChecklist,
+  getCorrectionAdvice,
+} from '@/lib/shootingCoach';
+import type {
+  CameraParams,
+  Device,
+  PosePlan,
+  SceneResult,
+  ShootingContext,
+  UserMode,
+} from '@/types';
 import {
   Aperture,
   Bookmark,
@@ -13,6 +25,7 @@ import {
   ShieldAlert,
   Timer,
 } from 'lucide-react';
+import { useState } from 'react';
 
 export function PlanView({
   scene,
@@ -21,6 +34,9 @@ export function PlanView({
   active,
   setActive,
   mode,
+  device,
+  context,
+  onContextChange,
   isFavorited,
   onFavorite,
 }: {
@@ -30,10 +46,19 @@ export function PlanView({
   active: number;
   setActive: (n: number) => void;
   mode: UserMode;
+  device: Device;
+  context: ShootingContext;
+  onContextChange: (context: ShootingContext) => void;
   isFavorited: boolean;
   onFavorite: () => void;
 }) {
   const plan = plans[active] ?? plans[0];
+  const [problem, setProblem] = useState<TrialProblem | null>(null);
+  if (!plan) return null;
+  const checklist = buildShootingChecklist(scene, params, plan, context);
+  const advice = problem
+    ? getCorrectionAdvice(problem, device, scene, params)
+    : null;
   return (
     <div className="plan-page">
       <header className="page-heading">
@@ -56,6 +81,56 @@ export function PlanView({
           {isFavorited ? '已收藏' : '收藏'}
         </button>
       </header>
+      <section className="context-card" aria-label="拍摄意图">
+        <div>
+          <span className="eyebrow">SHOOTING INTENT</span>
+          <h2>现场状态</h2>
+        </div>
+        <ChoiceRow
+          label="人物"
+          value={context.motion}
+          options={[
+            ['still', '静止'],
+            ['walking', '自然走动'],
+            ['fast', '快速动作'],
+          ]}
+          onChange={motion => onContextChange({ ...context, motion })}
+        />
+        <ChoiceRow
+          label="持机"
+          value={context.holding}
+          options={[
+            ['steady', '稳定手持'],
+            ['normal', '普通手持'],
+            ['shaky', '容易手抖'],
+            ['tripod', '三脚架'],
+          ]}
+          onChange={holding => onContextChange({ ...context, holding })}
+        />
+        <ChoiceRow
+          label="人数"
+          value={context.groupSize}
+          options={[
+            ['single', '单人'],
+            ['couple', '双人'],
+            ['group', '多人'],
+          ]}
+          onChange={groupSize => onContextChange({ ...context, groupSize })}
+        />
+      </section>
+      <section className="checklist-card">
+        <div className="section-title">
+          <div>
+            <span className="eyebrow">3-STEP FIELD GUIDE</span>
+            <h2>三步开拍</h2>
+          </div>
+        </div>
+        <ol>
+          {checklist.map(item => (
+            <li key={item}>{item}</li>
+          ))}
+        </ol>
+      </section>
       <section className="parameter-card">
         <div className="section-title">
           <div>
@@ -87,10 +162,6 @@ export function PlanView({
         {mode === 'expert' && (
           <div className="expert-grid">
             <p>
-              <b>原理</b>
-              {params.principle}
-            </p>
-            <p>
               <b>取舍</b>
               {params.tradeoff}
             </p>
@@ -98,6 +169,51 @@ export function PlanView({
               <b>风险</b>
               {params.risk}
             </p>
+          </div>
+        )}
+      </section>
+      <section className="correction-card">
+        <button
+          type="button"
+          className="correction-toggle"
+          onClick={() => setProblem(problem ? null : 'face-dark')}
+          aria-expanded={Boolean(problem)}
+        >
+          试拍不理想？
+        </button>
+        {problem && (
+          <div className="correction-panel">
+            <div className="problem-options" aria-label="选择试拍问题">
+              {(
+                [
+                  ['face-dark', '脸太暗'],
+                  ['motion-blur', '人物糊'],
+                  ['noise', '噪点高'],
+                  ['background-clipped', '背景过曝'],
+                  ['skin-color', '肤色偏色'],
+                ] as [TrialProblem, string][]
+              ).map(([id, label]) => (
+                <button
+                  type="button"
+                  key={id}
+                  onClick={() => setProblem(id)}
+                  aria-pressed={problem === id}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {advice && (
+              <div className="advice">
+                <strong>{advice.title} · 按顺序调整</strong>
+                <ol>
+                  {advice.steps.map(step => (
+                    <li key={step}>{step}</li>
+                  ))}
+                </ol>
+                <small>基于当前设置的规则建议，不会读取或分析你的照片。</small>
+              </div>
+            )}
           </div>
         )}
       </section>
@@ -112,6 +228,8 @@ export function PlanView({
               className="pose-photo"
               src={plan.imageUrl}
               alt={plan.imageAlt ?? plan.name}
+              loading="lazy"
+              decoding="async"
               onError={event => {
                 event.currentTarget.style.display = 'none';
               }}
@@ -200,6 +318,36 @@ export function CompositionOverlay({ type }: { type: string }) {
       <i />
       <b />
       <b />
+    </div>
+  );
+}
+
+function ChoiceRow<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: readonly (readonly [T, string])[];
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div className="choice-row">
+      <span>{label}</span>
+      <div>
+        {options.map(([id, text]) => (
+          <button
+            type="button"
+            key={id}
+            onClick={() => onChange(id)}
+            aria-pressed={value === id}
+          >
+            {text}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

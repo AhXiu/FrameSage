@@ -1,4 +1,5 @@
 import { useFrameSage } from '@/hooks/useFrameSage';
+import { matchesFavorite } from '@/lib/favorites';
 import type { TabId } from '@/types';
 import { Bookmark, Camera, Layers3, Settings2, Sparkles } from 'lucide-react';
 import { useState } from 'react';
@@ -18,9 +19,8 @@ export function FrameSageApp() {
     window.setTimeout(() => setToast(''), 1800);
   };
   const activePlanItem = app.plans[activePlan] ?? app.plans[0];
-  const favoriteItem = app.favorites.find(
-    item =>
-      item.plan.id === activePlanItem?.id && item.scene.id === app.scene.id,
+  const favoriteItem = app.favorites.find(item =>
+    matchesFavorite(item, activePlanItem?.id, app.scene.id, app.device.id),
   );
   const favorite = () => {
     if (favoriteItem) {
@@ -72,11 +72,11 @@ export function FrameSageApp() {
                 forced={app.devices.length === 0}
               />
               <Scanner
-                scene={app.scene}
-                onResult={s => {
-                  app.setScene(s);
+                assessment={app.assessment}
+                onResult={assessment => {
+                  app.setAssessment(assessment);
                   setActivePlan(0);
-                  notify(`已识别：${s.name}`);
+                  notify(`已识别：${assessment.primary.name}`);
                 }}
               />
               <button className="next-plan" onClick={() => setTab('plan')}>
@@ -96,6 +96,9 @@ export function FrameSageApp() {
               active={activePlan}
               setActive={setActivePlan}
               mode={app.mode}
+              device={app.device}
+              context={app.shootingContext}
+              onContextChange={app.setShootingContext}
               isFavorited={Boolean(favoriteItem)}
               onFavorite={favorite}
             />
@@ -181,7 +184,12 @@ function Nav({
   label: string;
 }) {
   return (
-    <button className={tab === id ? 'active' : ''} onClick={() => set(id)}>
+    <button
+      className={tab === id ? 'active' : ''}
+      onClick={() => set(id)}
+      aria-pressed={tab === id}
+      aria-label={`${label}页`}
+    >
       {icon}
       <span>{label}</span>
     </button>

@@ -170,3 +170,86 @@ test('低 ISO 上限夜景会保持快门并给出欠曝风险', () => {
   assert.match(result.risk, /欠曝|靠近光源|补光/);
   assert.ok(Number(result.shutter.match(/\d+/g)?.[1]) >= 100);
 });
+
+test('人物快速动作优先提高安全快门', () => {
+  const scene = classifyScene({
+    brightness: 52,
+    warmth: 50,
+    centerEdge: 0,
+    highlights: 20,
+    contrast: 25,
+    clutter: 20,
+  });
+  const still = recommend(DEFAULT_DEVICE, scene, 'beginner', {
+    motion: 'still',
+    holding: 'normal',
+    groupSize: 'single',
+  });
+  const fast = recommend(DEFAULT_DEVICE, scene, 'beginner', {
+    motion: 'fast',
+    holding: 'normal',
+    groupSize: 'single',
+  });
+  const denominator = (value: string) => Number(value.match(/1\/(\d+)/)?.[1]);
+  assert.ok(denominator(fast.shutter) > denominator(still.shutter));
+  assert.ok(fast.iso >= still.iso);
+});
+
+test('容易手抖比三脚架使用更快安全快门', () => {
+  const scene = classifyScene({
+    brightness: 35,
+    warmth: 50,
+    centerEdge: 0,
+    highlights: 10,
+    contrast: 25,
+    clutter: 20,
+  });
+  const shaky = recommend(DEFAULT_DEVICE, scene, 'beginner', {
+    motion: 'still',
+    holding: 'shaky',
+    groupSize: 'single',
+  });
+  const tripod = recommend(DEFAULT_DEVICE, scene, 'beginner', {
+    motion: 'still',
+    holding: 'tripod',
+    groupSize: 'single',
+  });
+  const denominator = (value: string) => Number(value.match(/1\/(\d+)/)?.[1]);
+  assert.ok(denominator(shaky.shutter) > denominator(tripod.shutter));
+});
+
+test('多人拍摄收小光圈并联动 ISO', () => {
+  const scene = classifyScene({
+    brightness: 52,
+    warmth: 50,
+    centerEdge: 0,
+    highlights: 20,
+    contrast: 25,
+    clutter: 20,
+  });
+  const single = recommend(DEFAULT_DEVICE, scene, 'beginner');
+  const group = recommend(DEFAULT_DEVICE, scene, 'beginner', {
+    motion: 'still',
+    holding: 'normal',
+    groupSize: 'group',
+  });
+  assert.ok(Number(group.aperture.slice(2)) > Number(single.aperture.slice(2)));
+  assert.ok(group.iso >= single.iso);
+});
+
+test('三脚架仍保护走动人物的运动快门', () => {
+  const scene = classifyScene({
+    brightness: 40,
+    warmth: 50,
+    centerEdge: 0,
+    highlights: 15,
+    contrast: 25,
+    clutter: 20,
+  });
+  const result = recommend(DEFAULT_DEVICE, scene, 'beginner', {
+    motion: 'walking',
+    holding: 'tripod',
+    groupSize: 'single',
+  });
+  assert.ok(Number(result.shutter.match(/1\/(\d+)/)?.[1]) >= 320);
+});

@@ -1,4 +1,16 @@
-import type { CameraParams, Device, SceneResult, UserMode } from '@/types';
+import type {
+  CameraParams,
+  Device,
+  SceneResult,
+  ShootingContext,
+  UserMode,
+} from '@/types';
+
+export const DEFAULT_SHOOTING_CONTEXT: ShootingContext = {
+  motion: 'still',
+  holding: 'normal',
+  groupSize: 'single',
+};
 
 const SHUTTER_STOPS = [
   80, 100, 125, 160, 200, 250, 320, 400, 500, 640, 800, 1000, 1250, 1600, 2000,
@@ -95,7 +107,11 @@ export function calculateExposureCompensation(
   return Math.round(clamp(compensation, -1, 1.3) * 10) / 10;
 }
 
-function targetAperture(device: Device, scene: SceneResult) {
+function targetAperture(
+  device: Device,
+  scene: SceneResult,
+  groupSize: ShootingContext['groupSize'],
+) {
   const lensMaximum =
     Number.isFinite(device.maxAperture) && device.maxAperture >= 0.7
       ? device.maxAperture
@@ -108,7 +124,9 @@ function targetAperture(device: Device, scene: SceneResult) {
         : scene.id === 'outdoor-front' || scene.id === 'shade-dappled'
           ? 2.8
           : 2.4;
-  return Math.max(lensMaximum, target);
+  const depthTarget =
+    groupSize === 'group' ? 4 : groupSize === 'couple' ? 3.2 : target;
+  return Math.max(lensMaximum, depthTarget);
 }
 
 function focusRecommendation(device: Device, aperture: number) {
@@ -145,12 +163,14 @@ export function recommend(
   device: Device,
   scene: SceneResult,
   _mode: UserMode,
+  context: ShootingContext = DEFAULT_SHOOTING_CONTEXT,
 ): CameraParams {
+  const shootingContext = { ...DEFAULT_SHOOTING_CONTEXT, ...context };
   const focal =
     Number.isFinite(device.focalLength) && device.focalLength > 0
       ? device.focalLength
       : 50;
-  const aperture = targetAperture(device, scene);
+  const aperture = targetAperture(device, scene, shootingContext.groupSize);
   const night = scene.id === 'city-night' || scene.id === 'window-warm-night';
   const backlit = scene.id === 'window-backlight';
   const dappled = scene.id === 'shade-dappled';
@@ -158,7 +178,26 @@ export function recommend(
   const compensation = calculateExposureCompensation(device, scene);
   const sceneEV = mapMetricsToEV(scene);
   const targetEV = sceneEV - compensation;
-  const safeDenominator = safeShutterDenominator(focal, night ? 1.3 : 2);
+  const holdingFactor =
+    shootingContext.holding === 'tripod'
+      ? 1
+      : shootingContext.holding === 'steady'
+        ? 1.3
+        : shootingContext.holding === 'shaky'
+          ? 3
+          : night
+            ? 1.3
+            : 2;
+  const motionFloor =
+    shootingContext.motion === 'fast'
+      ? 640
+      : shootingContext.motion === 'walking'
+        ? 320
+        : 80;
+  // 三脚架只消除手抖约束；人物运动下限始终保留。
+  const safeDenominator = nextShutterStop(
+    Math.max(motionFloor, safeShutterDenominator(focal, holdingFactor)),
+  );
 
   // 若安全快门在 ISO 100 已过曝，就继续加快快门；否则保持安全快门并抬高 ISO。
   const iso100Denominator = 2 ** targetEV / aperture ** 2;

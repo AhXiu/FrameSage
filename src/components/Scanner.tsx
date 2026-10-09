@@ -1,7 +1,7 @@
-import { SIM_PRESETS } from '@/data/scenes';
+import { SCENE_INFO, SIM_PRESETS } from '@/data/scenes';
 import { useCamera } from '@/hooks/useCamera';
-import { classifyScene } from '@/lib/sceneEngine';
-import type { SceneMetrics, SceneResult } from '@/types';
+import { confirmScene, evaluateScene } from '@/lib/sceneEngine';
+import type { SceneAssessment, SceneId, SceneMetrics } from '@/types';
 import {
   Camera,
   CircleHelp,
@@ -11,20 +11,28 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 
+const SCENE_IDS = Object.keys(SCENE_INFO) as SceneId[];
+
 export function Scanner({
-  scene,
+  assessment,
   onResult,
-}: { scene: SceneResult; onResult: (s: SceneResult) => void }) {
+}: {
+  assessment: SceneAssessment;
+  onResult: (s: SceneAssessment) => void;
+}) {
+  const scene = assessment.primary;
   const camera = useCamera(onResult);
   const [manual, setManual] = useState(false);
   const [metrics, setMetrics] = useState<SceneMetrics>(SIM_PRESETS[0].metrics);
   const [simBusy, setSimBusy] = useState(false);
   const simulate = async () => {
     setSimBusy(true);
-    await new Promise(r => setTimeout(r, 950));
-    onResult(classifyScene(metrics));
+    await new Promise(resolve => setTimeout(resolve, 950));
+    onResult(evaluateScene(metrics));
     setSimBusy(false);
   };
+  const correct = (id: SceneId) => onResult(confirmScene(scene.metrics, id));
+
   return (
     <>
       <div className="viewfinder">
@@ -58,19 +66,23 @@ export function Scanner({
         </div>
       </div>
       {camera.error && (
-        <div className="error-note">
+        <div className="error-note" role="alert">
           <CircleHelp size={18} />
           <span>{camera.error}</span>
+          <button type="button" onClick={camera.start}>
+            重试
+          </button>
         </div>
       )}
       <div className="scan-actions">
         {!camera.active ? (
-          <button className="primary" onClick={camera.start}>
+          <button type="button" className="primary" onClick={camera.start}>
             <Camera size={19} /> 开启后置相机
           </button>
         ) : (
           <>
             <button
+              type="button"
               className="primary"
               disabled={camera.scanning}
               onClick={camera.scan}
@@ -79,6 +91,7 @@ export function Scanner({
               {camera.scanning ? '正在读取光线…' : '扫描当前场景'}
             </button>
             <button
+              type="button"
               className="icon-action"
               onClick={camera.stop}
               aria-label="关闭相机"
@@ -87,7 +100,12 @@ export function Scanner({
             </button>
           </>
         )}
-        <button className="secondary" onClick={() => setManual(!manual)}>
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => setManual(!manual)}
+          aria-pressed={manual}
+        >
           <SlidersHorizontal size={18} /> 手动模拟
         </button>
       </div>
@@ -108,7 +126,11 @@ export function Scanner({
           </div>
           <div className="preset-line">
             {SIM_PRESETS.map(p => (
-              <button key={p.label} onClick={() => setMetrics(p.metrics)}>
+              <button
+                type="button"
+                key={p.label}
+                onClick={() => setMetrics(p.metrics)}
+              >
                 {p.label}
               </button>
             ))}
@@ -142,13 +164,14 @@ export function Scanner({
                 min={key === 'centerEdge' ? -50 : 0}
                 max="100"
                 value={metrics[key]}
-                onChange={e =>
-                  setMetrics({ ...metrics, [key]: Number(e.target.value) })
+                onChange={event =>
+                  setMetrics({ ...metrics, [key]: Number(event.target.value) })
                 }
               />
             </label>
           ))}
           <button
+            type="button"
             className="primary wide"
             onClick={simulate}
             disabled={simBusy}
@@ -159,12 +182,18 @@ export function Scanner({
       )}
       <section className="analysis-strip">
         <div className="scene-mark">
-          <span>识别场景</span>
+          <span>
+            {assessment.manuallyConfirmed ? '已手动确认' : '识别场景'}
+          </span>
           <strong>{scene.name}</strong>
         </div>
         <div>
-          <small>亮度</small>
-          <b>{scene.brightnessLabel}</b>
+          <small>可信度</small>
+          <b>{Math.round(assessment.confidence * 100)}%</b>
+        </div>
+        <div>
+          <small>次选</small>
+          <b>{assessment.alternative.name}</b>
         </div>
         <div>
           <small>光向</small>
@@ -174,11 +203,32 @@ export function Scanner({
           <small>色温</small>
           <b>{scene.temperature}</b>
         </div>
-        <div>
-          <small>背景</small>
-          <b>{scene.clutter}</b>
-        </div>
         <p>{scene.explanation}</p>
+        {!assessment.manuallyConfirmed && assessment.confidence < 0.62 && (
+          <output className="confidence-warning">
+            识别不够确定，请重新取景或在下方手动确认。
+          </output>
+        )}
+        {assessment.risks.map(risk => (
+          <p className="scene-risk" key={risk}>
+            {risk}
+          </p>
+        ))}
+        <div className="scene-correction" aria-label="手动纠正场景">
+          <small>场景不对？点选后立即重算方案</small>
+          <div>
+            {SCENE_IDS.map(id => (
+              <button
+                type="button"
+                key={id}
+                onClick={() => correct(id)}
+                aria-pressed={scene.id === id}
+              >
+                {SCENE_INFO[id].name}
+              </button>
+            ))}
+          </div>
+        </div>
       </section>
     </>
   );

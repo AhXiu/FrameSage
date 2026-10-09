@@ -8,6 +8,14 @@ export type SceneId =
   | 'city-night'
   | 'window-warm-night';
 export type UserMode = 'beginner' | 'expert';
+export type SubjectMotion = 'still' | 'walking' | 'fast';
+export type HoldingState = 'steady' | 'normal' | 'shaky' | 'tripod';
+export type GroupSize = 'single' | 'couple' | 'group';
+export interface ShootingContext {
+  motion: SubjectMotion;
+  holding: HoldingState;
+  groupSize: GroupSize;
+}
 export type Composition = '三分法' | '居中' | '框架' | '引导线' | '留白';
 
 export interface Device {
@@ -40,6 +48,13 @@ export interface SceneResult {
   clutter: string;
   explanation: string;
   metrics: SceneMetrics;
+}
+export interface SceneAssessment {
+  primary: SceneResult;
+  confidence: number;
+  alternative: Pick<SceneResult, 'id' | 'name'>;
+  risks: string[];
+  manuallyConfirmed: boolean;
 }
 export interface CameraParams {
   aperture: string;

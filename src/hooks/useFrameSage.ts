@@ -1,12 +1,21 @@
 import { DEFAULT_DEVICE } from '@/data/devices';
 import { rankPlans } from '@/data/poses';
-import { recommend } from '@/lib/recommendationEngine';
-import { classifyScene } from '@/lib/sceneEngine';
+import {
+  DEFAULT_SHOOTING_CONTEXT,
+  recommend,
+} from '@/lib/recommendationEngine';
+import { evaluateScene } from '@/lib/sceneEngine';
 import * as store from '@/lib/storage';
-import type { Device, Favorite, SceneResult, UserMode } from '@/types';
+import type {
+  Device,
+  Favorite,
+  SceneAssessment,
+  ShootingContext,
+  UserMode,
+} from '@/types';
 import { useEffect, useMemo, useState } from 'react';
 
-const INITIAL_SCENE = classifyScene({
+const INITIAL_ASSESSMENT = evaluateScene({
   brightness: 58,
   warmth: 54,
   centerEdge: 4,
@@ -21,7 +30,12 @@ export function useFrameSage() {
     store.loadCurrentId(),
   );
   const [mode, setModeState] = useState<UserMode>(() => store.loadMode());
-  const [scene, setScene] = useState<SceneResult>(INITIAL_SCENE);
+  const [assessment, setAssessment] =
+    useState<SceneAssessment>(INITIAL_ASSESSMENT);
+  const scene = assessment.primary;
+  const [shootingContext, setShootingContext] = useState<ShootingContext>(
+    DEFAULT_SHOOTING_CONTEXT,
+  );
   const [favorites, setFavorites] = useState<Favorite[]>(() =>
     store.loadFavorites(),
   );
@@ -29,8 +43,8 @@ export function useFrameSage() {
   const device =
     devices.find(item => item.id === currentId) ?? devices[0] ?? DEFAULT_DEVICE;
   const params = useMemo(
-    () => recommend(device, scene, mode),
-    [device, scene, mode],
+    () => recommend(device, scene, mode, shootingContext),
+    [device, scene, mode, shootingContext],
   );
   const plans = useMemo(() => {
     const aperture = Number.parseFloat(params.aperture.slice(2));
@@ -128,7 +142,16 @@ export function useFrameSage() {
   };
 
   const applyFavorite = (favorite: Favorite) => {
-    setScene(favorite.scene);
+    setAssessment({
+      primary: favorite.scene,
+      confidence: 1,
+      alternative: {
+        id: assessment.alternative.id,
+        name: assessment.alternative.name,
+      },
+      risks: [],
+      manuallyConfirmed: true,
+    });
     saveDevice(favorite.device);
   };
 
@@ -138,7 +161,8 @@ export function useFrameSage() {
     setFavorites([]);
     setCurrentId(null);
     setModeState('beginner');
-    setScene(INITIAL_SCENE);
+    setAssessment(INITIAL_ASSESSMENT);
+    setShootingContext(DEFAULT_SHOOTING_CONTEXT);
   };
 
   return {
@@ -146,10 +170,13 @@ export function useFrameSage() {
     device,
     mode,
     scene,
+    assessment,
+    shootingContext,
     params,
     plans,
     favorites,
-    setScene,
+    setAssessment,
+    setShootingContext,
     saveDevice,
     deleteDevice,
     selectDevice,

@@ -1,12 +1,12 @@
-import { analyzePixels, classifyScene } from '@/lib/sceneEngine';
-import type { SceneResult } from '@/types';
+import { analyzePixels, evaluateScene } from '@/lib/sceneEngine';
+import type { SceneAssessment } from '@/types';
 import { useEffect, useRef, useState } from 'react';
 
 const CAMERA_TIMEOUT_MS = 10_000;
 const CAPTURE_WIDTH = 160;
 const CAPTURE_HEIGHT = 120;
 
-export function useCamera(onResult: (result: SceneResult) => void) {
+export function useCamera(onResult: (result: SceneAssessment) => void) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const mountedRef = useRef(true);
@@ -30,6 +30,7 @@ export function useCamera(onResult: (result: SceneResult) => void) {
       mountedRef.current = false;
       streamRef.current?.getTracks().forEach(track => track.stop());
       streamRef.current = null;
+      if (videoRef.current) videoRef.current.srcObject = null;
     };
   }, []);
 
@@ -131,7 +132,7 @@ export function useCamera(onResult: (result: SceneResult) => void) {
         CAPTURE_HEIGHT,
       ).data;
       onResult(
-        classifyScene(analyzePixels(pixels, CAPTURE_WIDTH, CAPTURE_HEIGHT)),
+        evaluateScene(analyzePixels(pixels, CAPTURE_WIDTH, CAPTURE_HEIGHT)),
       );
     } catch {
       setError('读取摄像头画面失败，请重试或使用手动模拟。');
