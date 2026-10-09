@@ -1231,3 +1231,59 @@ textarea:focus-visible {
     transition: none !important;
   }
 }
+
+.catalog-selects {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 14px 0 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: #edf1e9;
+}
+.catalog-selects label {
+  min-width: 0;
+  font-size: 10px;
+  color: var(--muted);
+}
+.catalog-selects select {
+  display: block;
+  width: 100%;
+  margin-top: 5px;
+  padding: 9px 28px 9px 9px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--ink);
+  background: var(--paper);
+  font-size: 11px;
+}
+.catalog-selects select:disabled {
+  opacity: 0.55;
+}
+.catalog-note {
+  margin: 6px 2px 12px;
+  color: #8a5a38;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.legacy-presets {
+  margin: 10px 0 14px;
+  font-size: 11px;
+  color: var(--sage-dark);
+}
+.legacy-presets summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.legacy-presets .preset-grid {
+  margin-bottom: 0;
+}
+@media (max-width: 560px) {
+  .catalog-selects {
+    grid-template-columns: 1fr;
+  }
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
