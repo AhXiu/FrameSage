@@ -1,6 +1,11 @@
-import { CAMERA_BRANDS } from '@/data/deviceCatalog';
+import {
+  CAMERA_BODIES,
+  CAMERA_BRANDS,
+  CAMERA_LENSES,
+} from '@/data/deviceCatalog';
 import { DEVICE_PRESETS } from '@/data/devices';
 import {
+  autofillCatalogBody,
   autofillCatalogSelection,
   bodiesForBrand,
   compatibleLenses,
@@ -39,45 +44,108 @@ export function DeviceManager({
   onSelect: (id: string) => void;
   forced?: boolean;
 }) {
-  const [editing, setEditing] = useState<Device | null>(
-    forced && devices.length === 0 ? empty() : null,
-  );
+  const initialEditing = forced && devices.length === 0 ? empty() : null;
+  const initialMatch = initialEditing ? matchCatalogDevice(initialEditing) : {};
+  const [editing, setEditing] = useState<Device | null>(initialEditing);
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState('');
-  const match = editing ? matchCatalogDevice(editing) : {};
-  const [brandChoice, setBrandChoice] = useState(match.brand ?? '');
-  const [bodyChoice, setBodyChoice] = useState(match.body?.id ?? '');
-  const [lensChoice, setLensChoice] = useState(match.lens?.id ?? '');
+  const [brandChoice, setBrandChoice] = useState(initialMatch.brand ?? '');
+  const [brandQuery, setBrandQuery] = useState(initialMatch.brand ?? '');
+  const [bodyChoice, setBodyChoice] = useState(initialMatch.body?.id ?? '');
+  const [bodyQuery, setBodyQuery] = useState(initialMatch.body?.model ?? '');
+  const [lensChoice, setLensChoice] = useState(initialMatch.lens?.id ?? '');
+  const [lensQuery, setLensQuery] = useState(initialMatch.lens?.model ?? '');
+  const [customBody, setCustomBody] = useState(false);
+  const [customLens, setCustomLens] = useState(false);
 
   const beginEdit = (device: Device) => {
     const found = matchCatalogDevice(device);
     setEditing(device);
     setBrandChoice(found.brand ?? '');
+    setBrandQuery(found.brand ?? device.brand);
     setBodyChoice(found.body?.id ?? '');
+    setBodyQuery(found.body?.model ?? '');
     setLensChoice(found.lens?.id ?? '');
+    setLensQuery(found.lens?.model ?? '');
+    setCustomBody(!found.body && Boolean(device.model));
+    setCustomLens(!found.lens && Boolean(device.model));
     setMessage('');
   };
+
   const choosePreset = (index: number) =>
     beginEdit({
       id: editing?.id ?? crypto.randomUUID(),
       ...DEVICE_PRESETS[index],
     });
-  const chooseBrand = (brand: string) => {
+
+  const chooseBrand = (value: string) => {
+    setBrandQuery(value);
+    const brand = CAMERA_BRANDS.find(
+      item => item.toLocaleLowerCase() === value.trim().toLocaleLowerCase(),
+    );
+    if (!brand) return;
     setBrandChoice(brand);
+    setBrandQuery(brand);
     setBodyChoice('');
+    setBodyQuery('');
     setLensChoice('');
+    setLensQuery('');
+    setCustomBody(false);
+    setCustomLens(false);
+    if (editing) setEditing({ ...editing, brand });
   };
-  const chooseBody = (bodyId: string) => {
-    setBodyChoice(bodyId);
+
+  const chooseBody = (value: string) => {
+    setBodyQuery(value);
+    const selected = CAMERA_BODIES.find(
+      body => body.brand === brandChoice && body.model === value,
+    );
+    if (!selected) return;
+    setBodyChoice(selected.id);
+    setBodyQuery(selected.model);
     setLensChoice('');
-  };
-  const chooseLens = (lensId: string) => {
-    setLensChoice(lensId);
-    if (editing && bodyChoice && lensId) {
-      setEditing(autofillCatalogSelection(editing, bodyChoice, lensId));
-      setMessage('已自动填充目录参数，可继续手工修改');
+    setLensQuery('');
+    setCustomBody(false);
+    setCustomLens(false);
+    if (editing) {
+      setEditing(autofillCatalogBody(editing, selected.id));
+      setMessage('已填充机身推荐参数，请继续选择镜头或使用自定义镜头');
     }
   };
+
+  const chooseLens = (value: string) => {
+    setLensQuery(value);
+    const selected = CAMERA_LENSES.find(
+      item =>
+        item.model === value && compatibleLenses(bodyChoice).includes(item),
+    );
+    if (!selected) return;
+    setLensChoice(selected.id);
+    setLensQuery(selected.model);
+    setCustomLens(false);
+    if (editing && bodyChoice) {
+      setEditing(autofillCatalogSelection(editing, bodyChoice, selected.id));
+      setMessage('已自动填充目录参数，下面全部数字字段仍可手工覆盖');
+    }
+  };
+
+  const selectCustomBody = () => {
+    setCustomBody(true);
+    setBodyChoice('');
+    setBodyQuery('');
+    setLensChoice('');
+    setLensQuery('');
+    setCustomLens(true);
+    setMessage('已选择自定义机身，请在下方手动填写品牌、型号与参数');
+  };
+
+  const selectCustomLens = () => {
+    setCustomLens(true);
+    setLensChoice('');
+    setLensQuery('');
+    setMessage('已选择自定义镜头，请在下方手动填写型号 / 镜头与参数');
+  };
+
   const submit = () => {
     if (!editing?.brand.trim() || !editing.model.trim()) {
       setMessage('请填写品牌和型号');
@@ -92,6 +160,9 @@ export function DeviceManager({
     setEditing(null);
     setMessage('设备已保存');
   };
+
+  const bodySuggestions = bodiesForBrand(brandChoice, bodyQuery);
+  const lensSuggestions = compatibleLenses(bodyChoice, lensQuery);
 
   return (
     <section className="device-panel">
@@ -113,23 +184,23 @@ export function DeviceManager({
       </button>
       {open && devices.length > 0 && (
         <div className="device-list">
-          {devices.map(d => (
+          {devices.map(device => (
             <div
               className={
-                d.id === current.id ? 'device-row active' : 'device-row'
+                device.id === current.id ? 'device-row active' : 'device-row'
               }
-              key={d.id}
+              key={device.id}
             >
               <button
                 onClick={() => {
-                  onSelect(d.id);
+                  onSelect(device.id);
                   setOpen(false);
                 }}
               >
                 <Check size={15} />
-                {d.brand} {d.model}
+                {device.brand} {device.model}
               </button>
-              <button aria-label="编辑设备" onClick={() => beginEdit(d)}>
+              <button aria-label="编辑设备" onClick={() => beginEdit(device)}>
                 <Pencil size={15} />
               </button>
               <button
@@ -137,7 +208,7 @@ export function DeviceManager({
                 onClick={() =>
                   devices.length <= 1
                     ? setMessage('至少保留一台设备')
-                    : onDelete(d.id)
+                    : onDelete(device.id)
                 }
               >
                 <Trash2 size={15} />
@@ -165,63 +236,96 @@ export function DeviceManager({
               )}
             </div>
             <p className="muted">
-              可选择内置目录自动填充，也可使用原有预设或完整手动录入。所有参数都能修改并仅保存在本机。
+              搜索内置目录可自动填充，也可分别选择自定义机身或镜头。原有预设与本机数据继续可用。
             </p>
             <div className="catalog-selects" aria-label="相机镜头目录">
               <label>
-                品牌
-                <select
-                  value={brandChoice}
-                  onChange={e => chooseBrand(e.target.value)}
-                >
-                  <option value="">手动输入 / 未知品牌</option>
+                搜索 / 选择品牌
+                <input
+                  list="camera-brand-options"
+                  value={brandQuery}
+                  placeholder="输入 Sony、Canon…"
+                  onChange={event => chooseBrand(event.target.value)}
+                />
+                <datalist id="camera-brand-options">
                   {CAMERA_BRANDS.map(brand => (
-                    <option key={brand}>{brand}</option>
+                    <option value={brand} key={brand} />
                   ))}
-                </select>
+                </datalist>
               </label>
               <label>
-                机身
-                <select
-                  value={bodyChoice}
+                搜索 / 选择机身
+                <input
+                  list="camera-body-options"
+                  value={bodyQuery}
                   disabled={!brandChoice}
-                  onChange={e => chooseBody(e.target.value)}
-                >
-                  <option value="">选择机身</option>
-                  {bodiesForBrand(brandChoice).map(body => (
-                    <option value={body.id} key={body.id}>
-                      {body.model}
-                    </option>
+                  placeholder={brandChoice ? '输入型号搜索' : '请先选择品牌'}
+                  onChange={event => chooseBody(event.target.value)}
+                />
+                <datalist id="camera-body-options">
+                  {bodySuggestions.map(item => (
+                    <option
+                      value={item.model}
+                      label={`${item.mount} · ${item.sensorFormat}`}
+                      key={item.id}
+                    />
                   ))}
-                </select>
+                </datalist>
+                <button
+                  type="button"
+                  className={
+                    customBody ? 'custom-choice active' : 'custom-choice'
+                  }
+                  onClick={selectCustomBody}
+                >
+                  自定义机身
+                </button>
               </label>
               <label>
-                兼容镜头
-                <select
-                  value={lensChoice}
+                搜索 / 选择兼容镜头
+                <input
+                  list="camera-lens-options"
+                  value={lensQuery}
                   disabled={!bodyChoice}
-                  onChange={e => chooseLens(e.target.value)}
-                >
-                  <option value="">选择兼容镜头</option>
-                  {compatibleLenses(bodyChoice).map(lens => (
-                    <option value={lens.id} key={lens.id}>
-                      {lens.model}
-                    </option>
+                  placeholder={
+                    bodyChoice ? '输入焦段或型号搜索' : '请先选择机身'
+                  }
+                  onChange={event => chooseLens(event.target.value)}
+                />
+                <datalist id="camera-lens-options">
+                  {lensSuggestions.map(item => (
+                    <option
+                      value={item.model}
+                      label={`${item.nativeFocalLength} · ${item.coverage} · ${item.stabilization ? '防抖' : '无镜头防抖'}`}
+                      key={item.id}
+                    />
                   ))}
-                </select>
+                </datalist>
+                <button
+                  type="button"
+                  className={
+                    customLens ? 'custom-choice active' : 'custom-choice'
+                  }
+                  onClick={selectCustomLens}
+                >
+                  自定义镜头
+                </button>
               </label>
             </div>
             <p className="catalog-note">
-              高感 ISO 阈值为 FrameSage
-              推荐值，并非厂商官方规格；请按实际画质偏好调整。
+              高感 ISO 是 FrameSage
+              推荐阈值，动态范围是不同测试口径下的近似参考；两者都不是厂商官方精确规格，请按实拍与输出需求覆盖。
             </p>
             <details className="legacy-presets">
               <summary>使用原有快捷预设</summary>
               <div className="preset-grid">
-                {DEVICE_PRESETS.map((p, i) => (
-                  <button key={p.model} onClick={() => choosePreset(i)}>
-                    <strong>{p.brand}</strong>
-                    <span>{p.model}</span>
+                {DEVICE_PRESETS.map((preset, index) => (
+                  <button
+                    key={preset.model}
+                    onClick={() => choosePreset(index)}
+                  >
+                    <strong>{preset.brand}</strong>
+                    <span>{preset.model}</span>
                   </button>
                 ))}
               </div>
@@ -230,56 +334,56 @@ export function DeviceManager({
               <Text
                 label="品牌"
                 value={editing.brand}
-                set={v => setEditing({ ...editing, brand: v })}
+                set={value => setEditing({ ...editing, brand: value })}
               />
               <Text
                 label="型号 / 镜头"
                 value={editing.model}
-                set={v => setEditing({ ...editing, model: v })}
+                set={value => setEditing({ ...editing, model: value })}
               />
               <Num
-                label="高感 ISO 推荐阈值"
+                label="高感 ISO（FrameSage 推荐阈值）"
                 value={editing.isoLimit}
-                set={v => setEditing({ ...editing, isoLimit: v })}
+                set={value => setEditing({ ...editing, isoLimit: value })}
               />
               <Num
-                label="动态范围（档）"
+                label="动态范围参考（档，近似）"
                 value={editing.dynamicRange}
                 step="0.1"
-                set={v => setEditing({ ...editing, dynamicRange: v })}
+                set={value => setEditing({ ...editing, dynamicRange: value })}
               />
               <Text
-                label="色彩倾向"
+                label="色彩倾向（工程标签）"
                 value={editing.colorBias}
-                set={v => setEditing({ ...editing, colorBias: v })}
+                set={value => setEditing({ ...editing, colorBias: value })}
               />
               <Num
-                label="焦段（mm）"
+                label="焦段 / 规则代表焦段（mm）"
                 value={editing.focalLength}
-                set={v => setEditing({ ...editing, focalLength: v })}
+                set={value => setEditing({ ...editing, focalLength: value })}
               />
               <Num
                 label="最大光圈"
                 value={editing.maxAperture}
                 step="0.1"
-                set={v => setEditing({ ...editing, maxAperture: v })}
+                set={value => setEditing({ ...editing, maxAperture: value })}
               />
               <Num
                 label="虚化系数"
                 value={editing.bokehFactor}
                 step="0.01"
-                set={v => setEditing({ ...editing, bokehFactor: v })}
+                set={value => setEditing({ ...editing, bokehFactor: value })}
               />
               <Num
                 label="最近对焦距离（m）"
                 value={editing.minFocus}
                 step="0.01"
-                set={v => setEditing({ ...editing, minFocus: v })}
+                set={value => setEditing({ ...editing, minFocus: value })}
               />
               <Text
                 label="说明"
                 value={editing.notes}
-                set={v => setEditing({ ...editing, notes: v })}
+                set={value => setEditing({ ...editing, notes: value })}
               />
             </div>
             {message && <p className="inline-message">{message}</p>}
@@ -297,20 +401,26 @@ function Text({
   label,
   value,
   set,
-}: { label: string; value: string; set: (v: string) => void }) {
+}: { label: string; value: string; set: (value: string) => void }) {
   return (
     <label>
       {label}
-      <input value={value} onChange={e => set(e.target.value)} />
+      <input value={value} onChange={event => set(event.target.value)} />
     </label>
   );
 }
+
 function Num({
   label,
   value,
   set,
   step = '1',
-}: { label: string; value: number; set: (v: number) => void; step?: string }) {
+}: {
+  label: string;
+  value: number;
+  set: (value: number) => void;
+  step?: string;
+}) {
   return (
     <label>
       {label}
@@ -318,7 +428,7 @@ function Num({
         type="number"
         step={step}
         value={value}
-        onChange={e => set(Number(e.target.value))}
+        onChange={event => set(Number(event.target.value))}
       />
     </label>
   );

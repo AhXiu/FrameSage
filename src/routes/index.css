@@ -1247,19 +1247,35 @@ textarea:focus-visible {
   font-size: 10px;
   color: var(--muted);
 }
-.catalog-selects select {
+.catalog-selects input {
   display: block;
   width: 100%;
   margin-top: 5px;
-  padding: 9px 28px 9px 9px;
+  padding: 9px;
   border: 1px solid var(--line);
   border-radius: 10px;
   color: var(--ink);
   background: var(--paper);
   font-size: 11px;
 }
-.catalog-selects select:disabled {
+.catalog-selects input:disabled {
   opacity: 0.55;
+}
+.custom-choice {
+  width: 100%;
+  margin-top: 6px;
+  padding: 7px 9px;
+  border: 1px dashed var(--sage);
+  border-radius: 9px;
+  color: var(--sage-dark);
+  background: transparent;
+  font-size: 10px;
+  font-weight: 700;
+}
+.custom-choice.active {
+  border-style: solid;
+  color: var(--paper);
+  background: var(--sage);
 }
 .catalog-note {
   margin: 6px 2px 12px;
