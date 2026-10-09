@@ -69,6 +69,36 @@ export interface CameraParams {
   tradeoff: string;
   risk: string;
 }
+export type OutfitStyle = '清新' | '通勤' | '复古' | '街头' | '优雅' | '休闲';
+export type ClothingType = '裙装' | '裤装' | '长外套' | '短外套' | '运动装';
+export type EnvironmentFeature =
+  | '窗边'
+  | '墙面'
+  | '座椅'
+  | '栏杆'
+  | '街道'
+  | '树木'
+  | '开阔空间';
+export interface OutfitProfile {
+  clothingTypes: string[];
+  styles: string[];
+  footwearAccessories: string[];
+  movementRestrictions: string[];
+}
+export interface EnvironmentProfile {
+  usableObjects: string[];
+  spaces: string[];
+  backgroundStructures: string[];
+  lightTendencies: string[];
+}
+export interface PortraitContextAnalysis {
+  outfit: OutfitProfile;
+  environment: EnvironmentProfile;
+  confidence: number;
+  summary: string;
+  source: 'vision' | 'manual';
+}
+
 export interface PosePlan {
   id: string;
   name: string;
@@ -86,6 +116,7 @@ export interface PosePlan {
   imageUrl?: string;
   imageAlt?: string;
   score?: number;
+  personalizationReason?: string;
 }
 export interface Favorite {
   id: string;

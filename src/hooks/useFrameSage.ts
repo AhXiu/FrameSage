@@ -9,6 +9,7 @@ import * as store from '@/lib/storage';
 import type {
   Device,
   Favorite,
+  PosePlan,
   SceneAssessment,
   ShootingContext,
   UserMode,
@@ -104,8 +105,11 @@ export function useFrameSage() {
     store.saveMode(next);
   };
 
-  const addFavorite = (planIndex: number) => {
-    const plan = plans[planIndex] ?? plans[0];
+  const addFavorite = (planOrIndex: PosePlan | number) => {
+    const plan =
+      typeof planOrIndex === 'number'
+        ? (plans[planOrIndex] ?? plans[0])
+        : planOrIndex;
     if (!plan) return;
     const item: Favorite = {
       id: crypto.randomUUID(),

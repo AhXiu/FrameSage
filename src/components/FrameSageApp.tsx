@@ -1,8 +1,8 @@
 import { useFrameSage } from '@/hooks/useFrameSage';
 import { matchesFavorite } from '@/lib/favorites';
-import type { TabId } from '@/types';
+import type { PosePlan, TabId } from '@/types';
 import { Bookmark, Camera, Layers3, Settings2, Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DeviceManager } from './DeviceManager';
 import { FavoritesView } from './FavoritesView';
 import { PlanView } from './PlanView';
@@ -13,12 +13,20 @@ export function FrameSageApp() {
   const app = useFrameSage();
   const [tab, setTab] = useState<TabId>('shoot');
   const [activePlan, setActivePlan] = useState(0);
+  const [personalizedPlans, setPersonalizedPlans] = useState<PosePlan[] | null>(
+    null,
+  );
   const [toast, setToast] = useState('');
+  const displayedPlans = personalizedPlans ?? app.plans;
+  useEffect(() => {
+    setPersonalizedPlans(null);
+    setActivePlan(0);
+  }, [app.scene.id]);
   const notify = (text: string) => {
     setToast(text);
     window.setTimeout(() => setToast(''), 1800);
   };
-  const activePlanItem = app.plans[activePlan] ?? app.plans[0];
+  const activePlanItem = displayedPlans[activePlan] ?? displayedPlans[0];
   const favoriteItem = app.favorites.find(item =>
     matchesFavorite(item, activePlanItem?.id, app.scene.id, app.device.id),
   );
@@ -28,7 +36,8 @@ export function FrameSageApp() {
       notify('已取消收藏');
       return;
     }
-    app.addFavorite(activePlan);
+    if (!activePlanItem) return;
+    app.addFavorite(activePlanItem);
     notify('方案已完整收藏');
   };
   return (
@@ -92,9 +101,18 @@ export function FrameSageApp() {
             <PlanView
               scene={app.scene}
               params={app.params}
-              plans={app.plans}
+              plans={displayedPlans}
               active={activePlan}
               setActive={setActivePlan}
+              personalized={Boolean(personalizedPlans)}
+              onApplyPersonalized={plans => {
+                setPersonalizedPlans(plans);
+                setActivePlan(0);
+              }}
+              onRestorePlans={() => {
+                setPersonalizedPlans(null);
+                setActivePlan(0);
+              }}
               mode={app.mode}
               device={app.device}
               context={app.shootingContext}

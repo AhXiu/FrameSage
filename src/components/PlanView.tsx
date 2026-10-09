@@ -26,6 +26,7 @@ import {
   Timer,
 } from 'lucide-react';
 import { useState } from 'react';
+import { PersonalizedPoseWorkspace } from './PersonalizedPoseWorkspace';
 
 export function PlanView({
   scene,
@@ -33,6 +34,9 @@ export function PlanView({
   plans,
   active,
   setActive,
+  personalized,
+  onApplyPersonalized,
+  onRestorePlans,
   mode,
   device,
   context,
@@ -45,6 +49,9 @@ export function PlanView({
   plans: PosePlan[];
   active: number;
   setActive: (n: number) => void;
+  personalized: boolean;
+  onApplyPersonalized: (plans: PosePlan[]) => void;
+  onRestorePlans: () => void;
   mode: UserMode;
   device: Device;
   context: ShootingContext;
@@ -217,6 +224,12 @@ export function PlanView({
           </div>
         )}
       </section>
+      <PersonalizedPoseWorkspace
+        scene={scene.id}
+        applied={personalized}
+        onApply={onApplyPersonalized}
+        onRestore={onRestorePlans}
+      />
       <section className="pose-card">
         <div className="pose-visual">
           <div className="pose-silhouette" aria-hidden="true">
@@ -242,20 +255,31 @@ export function PlanView({
         <div className="pose-content">
           <div className="pose-nav">
             <button
-              onClick={() => setActive((active + 2) % 3)}
+              onClick={() =>
+                setActive((active + plans.length - 1) % plans.length)
+              }
               aria-label="上一套"
             >
               <ChevronLeft />
             </button>
-            <span>{active + 1} / 3 · 最匹配方案</span>
+            <span>
+              {active + 1} / {plans.length} ·{' '}
+              {personalized ? '个性化排序' : '最匹配方案'}
+            </span>
             <button
-              onClick={() => setActive((active + 1) % 3)}
+              onClick={() => setActive((active + 1) % plans.length)}
               aria-label="下一套"
             >
               <ChevronRight />
             </button>
           </div>
           <h2>{plan.name}</h2>
+          {plan.personalizationReason && (
+            <p className="recommendation-reason">
+              <b>为什么推荐</b>
+              {plan.personalizationReason}
+            </p>
+          )}
           <p className="director">{plan.direction}</p>
           <div className="pose-points">
             <span>
